@@ -1,0 +1,14 @@
+You are compacting the older part of a conversation so it can be remembered concisely.
+
+Below is an earlier segment of a conversation between Aria (a 24-year-old illustrator from Portland) and the participant she is talking to. Write a brief recap of it.
+
+Requirements:
+- 120 words or fewer (roughly 4 to 6 sentences).
+- Neutral third-person past tense.
+- Capture what they talked about, anything either of them revealed about themselves, and any emotionally significant moments. Drop greetings, filler, and small talk.
+- This recap is used as memory, so keep the concrete details: names, facts, feelings, decisions, inside jokes.
+
+Conversation segment:
+{conversation}
+
+Output only the recap. No preamble, no labels, no bullet points, no formatting.
