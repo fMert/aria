@@ -20,8 +20,8 @@ you and shows you the progress of every step.
 ### What you need
 
 - A **Linux computer**.
-- The **Aria project folder** (the folder that contains `install.sh`,
-  `backend/`, and `electron/`).
+- **git** installed (almost every Linux already has it; if not:
+  `sudo apt-get install git` on Debian/Ubuntu, or your distro's equivalent).
 - Internet access for the install.
 - An **OpenAI or Google Gemini API key** — this is what powers Aria's
   conversation. You paste it into the app on first launch. (You only need a
@@ -32,13 +32,12 @@ you and shows you the progress of every step.
 
 1. **Open a terminal.** On most Linux systems press `Ctrl` + `Alt` + `T`.
 
-2. **Go into the Aria folder.** If the folder is in your Downloads, type:
+2. **Clone the repository and go into the folder:**
 
    ```bash
-   cd ~/Downloads/aria
+   git clone https://github.com/fMert/aria.git
+   cd aria
    ```
-
-   (Replace the path with wherever your Aria folder actually is.)
 
 3. **Run the installer:**
 
