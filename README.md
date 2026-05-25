@@ -1,8 +1,8 @@
 # Aria
 
-A desktop chat application for IRB-approved deception research. Participants converse with "Aria," a simulated human persona powered by GPT-4o. An independent local model (Gemma via Ollama) silently observes conversations and maintains Aria's diary and emotional state.
-
-> **IRB Notice:** This software is designed for use in deception studies in which participants are not immediately informed that their conversation partner is an AI. All deployments must be covered by an Institutional Review Board (IRB) approval. Participants must be fully debriefed at the conclusion of their involvement. The researchers are responsible for ethical use.
+A desktop chat application. You converse with **Aria**, a persistent character
+with her own diary, mood, and memories — quietly maintained between sessions
+by a small local "observer" model that runs in the background.
 
 ---
 
@@ -72,20 +72,21 @@ Aria has a small background model — the **observer** — that quietly updates
 her diary and mood. It runs **on your own device** through a tool called
 **Ollama**. This is **optional**: Aria's conversation works fine without it.
 
-Install Ollama:
+Install Ollama and pull any model you like:
 
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
-ollama pull tinyllama
+ollama pull <your-chosen-model>
 ```
 
 On the Aria **login screen**, tap the **gear icon (⚙)** in the top-right
-corner to set the **observer model** (for example `tinyllama` on a
-lower-spec machine). On a strong PC you can leave the default.
+corner to set the **observer model** to whatever you pulled. Smaller models
+are fine on lower-spec machines.
 
 ### First run — using the app
 
-1. On the login screen, type a **Participant ID** (any name/number).
+1. On the login screen, type an **ID** (any name/number — it's just used to
+   keep your data separate on disk).
 2. Choose a **provider**: OpenAI, Google Gemini, or Ollama (local).
 3. Paste the **API key** for that provider and tap **Verify**, then pick a
    model.
@@ -150,17 +151,16 @@ The sections below are for developers working on Aria itself.
 | Node.js | ≥ 18 | [nodejs.org](https://nodejs.org) |
 | Python | ≥ 3.10 | |
 | Ollama | latest | [ollama.ai](https://ollama.ai) |
-| OpenAI **or** Gemini API key | — | Per-participant; provider is selectable at login |
+| OpenAI **or** Gemini API key | — | Provider and model are selectable at login |
 
 ### Setup
 
-#### 1. Install Ollama and pull the observer model
+#### 1. Install Ollama and pull an observer model
 
 ```bash
 # Install Ollama (https://ollama.ai)
-ollama pull gemma4:e4b
-# To use a different observer model (e.g. gemma2:2b on lower-spec machines):
-# Set OBSERVER_MODEL=gemma2:2b in your environment
+ollama pull <your-chosen-model>
+# Set the OBSERVER_MODEL environment variable to override the default at runtime.
 ```
 
 #### 2. Install Python dependencies
@@ -188,7 +188,10 @@ python3 -m uvicorn main:app --host 127.0.0.1 --port 8000
 NODE_ENV=development npm run dev
 ```
 
-The app window will open. On first launch, enter a participant ID, choose a provider (OpenAI or Google Gemini), and enter the participant's API key for that provider. The backend listens on a fixed `127.0.0.1:8000` so the renderer's origin (and its `localStorage`) stays stable across launches.
+The app window will open. On first launch, enter an ID, choose a provider
+(OpenAI or Google Gemini), and enter the API key for that provider. The
+backend listens on a fixed `127.0.0.1:8000` so the renderer's origin (and its
+`localStorage`) stays stable across launches.
 
 ### Building for distribution
 
@@ -196,7 +199,9 @@ The app window will open. On first launch, enter a participant ID, choose a prov
 npm run dist
 ```
 
-Outputs a platform-specific installer to `dist/`. The Python backend is expected to be available on the participant's machine (or bundled via PyInstaller — see advanced setup below).
+Outputs a platform-specific installer to `dist/`. The Python backend is
+expected to be available on the target machine (or bundled via PyInstaller —
+see below).
 
 #### Bundling the Python backend (optional)
 
@@ -206,34 +211,34 @@ pip install pyinstaller
 pyinstaller --onefile --name aria-backend main.py
 ```
 
-Then update `electron/main.ts` to launch the compiled binary instead of `python3 -m uvicorn`.
+Then update `electron/main.ts` to launch the compiled binary instead of
+`python3 -m uvicorn`.
 
 ---
 
-## Researcher Controls
+## Admin panel
 
-**Shortcut:** `Ctrl+Shift+R` (or `Cmd+Shift+R` on macOS)
+A hidden admin panel is available via the shortcut
+**`Ctrl+Shift+R`** (or `Cmd+Shift+R` on macOS). It opens a password prompt.
+The default password is `aria2024`. To change it, use the panel's UI, or call
+the IPC handler:
 
-This opens a password prompt. The default password is `aria2024`. To change it:
-
-```bash
-# In the researcher panel UI, or via the IPC handler:
-# window.aria.setResearcherPassword("your-new-password")
+```js
+window.aria.setResearcherPassword("your-new-password")
 ```
 
-### Researcher panel features
+### Admin panel features
 
-- **Overview:** Current love value (0–10), full history of changes with reasons, force-override the value
-- **Diary:** Full diary contents, ability to manually append entries
-- **Log:** Complete session log (all messages, inner thoughts, observer decisions, API calls, errors)
-- **Export:** Download full session data as JSON for analysis
-- **Debrief:** Show a debrief screen to the participant explaining the AI nature of the study
+- **Overview:** Current love value (0–10), full history of changes with reasons, and the ability to force-override the value.
+- **Diary:** Full diary contents, with the ability to manually append entries.
+- **Log:** Complete session log (all messages, inner thoughts, observer decisions, API calls, errors).
+- **Export:** Download the full session as JSON.
 
 ---
 
 ## File storage
 
-All participant data is stored in `~/.aria/<participant_id>/`:
+Per-ID data is stored in `~/.aria/<id>/`:
 
 | File | Description |
 |---|---|
@@ -246,31 +251,33 @@ All participant data is stored in `~/.aria/<participant_id>/`:
 
 ## Configuration
 
-| Environment variable | Default | Description |
-|---|---|---|
-| `OBSERVER_MODEL` | `gemma4:e4b` | Ollama model name for the observer |
-| `ARIA_PORT` | `8000` | Backend port |
+| Environment variable | Description |
+|---|---|
+| `OBSERVER_MODEL` | Ollama model tag for the observer (whatever you pulled). |
+| `ARIA_PORT` | Backend port. Defaults to `8000`. |
 
 ---
 
 ## Architecture
 
 ```
-Participant
+User
     ↓ text message
 Electron renderer (React)
     ↓ HTTP POST /chat
 FastAPI backend (Python)
     ↓ OpenAI API or Gemini API (provider + model selectable at login)
 Aria (main model) → <inner_thoughts> + <reply>
-    ↓ strip tags → display reply to participant
+    ↓ strip tags → display reply
     ↓ inner_thoughts + reply → Observer (background)
-        ↓ Ollama (gemma4:e4b)
+        ↓ Ollama (your chosen model)
             → diary update (if warranted)
             → love value update (if warranted)
 ```
 
-The observer never blocks the main response path. It runs in a background queue. If Ollama is unavailable, updates queue in memory and apply when Ollama recovers.
+The observer never blocks the main response path. It runs in a background
+queue. If Ollama is unavailable, updates queue in memory and apply when
+Ollama recovers.
 
 ---
 
@@ -281,27 +288,18 @@ cd backend
 python3 -m pytest tests/ -v
 ```
 
-Tests cover: file atomicity, love clamping, inner-thoughts parsing, retry logic, observer NONE-handling, and a 50-turn integration test with mocked OpenAI.
+Tests cover: file atomicity, love clamping, inner-thoughts parsing, retry
+logic, observer NONE-handling, and a 50-turn integration test with a mocked
+OpenAI client.
 
 ---
 
 ## Security notes
 
-- The API key (OpenAI or Gemini) is stored using the OS keychain (`keytar`) — never in plaintext
-- The key is never logged, and never transmitted anywhere except the selected provider (`api.openai.com` or `generativelanguage.googleapis.com`)
-- The backend only listens on `127.0.0.1` — not reachable from the network
-- No telemetry libraries are included
-
----
-
-## Ethical use
-
-This tool is designed for research contexts with proper IRB oversight. Key requirements for ethical deployment:
-
-1. IRB approval must be in place before any data collection
-2. Participants must be fully debriefed at the end of their participation
-3. Data must be stored and handled per your institution's IRB-approved protocol
-4. The researcher is responsible for all ethical obligations
+- The API key (OpenAI or Gemini) is stored using the OS keychain (`keytar`) — never in plaintext.
+- The key is never logged, and never transmitted anywhere except the selected provider (`api.openai.com` or `generativelanguage.googleapis.com`).
+- The backend only listens on `127.0.0.1` — not reachable from the network.
+- No telemetry libraries are included.
 
 ---
 
