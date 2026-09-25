@@ -158,6 +158,15 @@ else
   ok "Electron installed."
 fi
 
+# Electron can exist even when keytar's native install step was skipped.
+if ! node -e "require('keytar')" >/dev/null 2>&1; then
+  say "Repairing the native credential-storage module (keytar)..."
+  run npm rebuild keytar --ignore-scripts=false \
+    || fail "Could not rebuild keytar (see messages above)."
+fi
+run node -e "require('keytar')" \
+  || fail "The credential-storage module could not load (see messages above)."
+
 # --------------------------------------------------------------------------
 # Step 5 - build the app
 # --------------------------------------------------------------------------
